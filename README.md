@@ -8,12 +8,6 @@
 
 ![demogif](https://r2.chaogpt.space/goczdemo.gif)
 
-## 安装 / install
-
-```bash
-curl -sSL https://raw.githubusercontent.com/charlzyx/gocz/refs/heads/master/install.sh | bash
-```
-
 ## 特性 / Features
 
 - 🎯 交互式提交信息生成 / Interactive commit message generation
@@ -24,14 +18,18 @@ curl -sSL https://raw.githubusercontent.com/charlzyx/gocz/refs/heads/master/inst
 
 ## 安装 / Installation
 
-没有发布, 自己 build 吧
+```bash
+curl -sSL https://raw.githubusercontent.com/charlzyx/gocz/refs/heads/master/install.sh | bash
+```
+
+或者自己 build 吧
 
 > 源码
 
 ```bash
 # 克隆仓库 / Clone repository
-git clone https://github.com/charlzyx/typeto.git
-cd typeto/gocz
+git clone https://github.com/charlzyx/gocz.git
+cd gocz
 # 安装依赖 / Install dependencies
 go mod tidy
 # 本地构建 / Local build
