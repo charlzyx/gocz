@@ -25,6 +25,10 @@ jobs:
             goos: darwin
             goarch: arm64
             ext: ""
+          - os: windows-latest
+            goos: windows
+            goarch: amd64
+            ext: ".exe"
 
     runs-on: ${{ matrix.os }}
 
@@ -38,11 +42,28 @@ jobs:
           go-version: "1.21" # 设置 Go 版本
 
       - name: Extract Version from Tag
+        if: matrix.os != 'windows-latest'
         run: |
           echo "VERSION=${GITHUB_REF#refs/tags/}" >> $GITHUB_ENV
 
-      # Linux/macOS 上执行 Bash 命令
+      - name: Extract Version from Tag
+        if: matrix.os == 'windows-latest'
+        run: |
+          # Powershell中字符串操作需要使用-replace
+          $version = $env:GITHUB_REF -replace 'refs/tags/', ''
+          "VERSION=$version" | Out-File -Encoding UTF8 -FilePath $env:GITHUB_ENV
+
+      - name: Build Binary (Windows)
+        if: matrix.os == 'windows-latest'
+        run: |
+          mkdir build
+          $env:GOOS = "${{ matrix.goos }}"
+          $env:GOARCH = "${{ matrix.goarch }}"
+          # 确保这里使用 $env:VERSION 访问 VERSION 环境变量
+          go build -ldflags="-X 'main.version=$env:VERSION'" -o "build/gocz-$env:VERSION-${{ matrix.goos }}-${{ matrix.goarch }}${{ matrix.ext }}"
+
       - name: Build Binary (Linux/macOS)
+        if: matrix.os != 'windows-latest'
         run: |
           mkdir -p build
           GOOS=${{ matrix.goos }} GOARCH=${{ matrix.goarch }} go build -ldflags="-X 'main.version=${{ env.VERSION }}'" -o build/gocz-${{ env.VERSION }}-${{ matrix.goos }}-${{ matrix.goarch }}${{ matrix.ext }}
@@ -51,7 +72,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: gocz-${{ env.VERSION }}-${{ matrix.goos }}-${{ matrix.goarch }}
-          path: build/gocz-${{ env.VERSION }}-${{ matrix.goos }}-${{ matrix.goarch }}${{ matrix.ext }}
+          path: build/
 
   release:
     name: Release gocz
@@ -63,14 +84,17 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           path: build/
-
       - name: List Downloaded Files
-        run: ls -R build/
+        run: ls -R build/ && pwd
 
       - name: Create GitHub Release
-        uses: softprops/action-gh-release@v1
+        uses: softprops/action-gh-release@v2
         with:
-          files: ./*
+          files: |
+            build/gocz-${{ github.ref_name }}-linux-amd64
+            build/gocz-${{ github.ref_name }}-windows-amd64.exe
+            build/gocz-${{ github.ref_name }}-darwin-amd64
+            build/gocz-${{ github.ref_name }}-darwin-arm64
           name: Release ${{ github.ref_name }}
           tag_name: ${{ github.ref_name }}
           draft: false
