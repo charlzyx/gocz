@@ -1,0 +1,85 @@
+name: Go Multi-Platform Build and Release
+
+on:
+  push:
+    tags:
+      - "v.*" # 监听符合 vX.X.X 或 vX.X.X-beta.X 的 tag 推送
+
+jobs:
+  build:
+    name: Build for ${{ matrix.os }} (${{ matrix.goarch }})
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-latest
+            goos: linux
+            goarch: amd64
+            ext: ""
+          - os: windows-latest
+            goos: windows
+            goarch: amd64
+            ext: ".exe"
+          - os: macos-latest
+            goos: darwin
+            goarch: amd64
+            ext: ""
+          - os: macos-latest
+            goos: darwin
+            goarch: arm64
+            ext: ""
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.21" # 设置 Go 版本
+
+      - name: Extract Version from Tag
+        run: echo "VERSION=${GITHUB_REF#refs/tags/}" >> $GITHUB_ENV
+
+      - name: Build Binary
+        run: |
+          mkdir -p build
+          GOOS=${{ matrix.goos }} GOARCH=${{ matrix.goarch }} \
+          go build -ldflags="-X 'main.version=${{ env.VERSION }}'" \
+          -o build/gocz-${{ env.VERSION }}-${{ matrix.goos }}-${{ matrix.goarch }}${{ matrix.ext }}
+
+      - name: Upload Build Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: gocz-${{ env.VERSION }}-${{ matrix.goos }}-${{ matrix.goarch }}
+          path: build/gocz-${{ env.VERSION }}-${{ matrix.goos }}-${{ matrix.goarch }}${{ matrix.ext }}
+
+  release:
+    name: Release gocz
+    needs: build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Download all Build Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: build/
+
+      - name: List Downloaded Files
+        run: ls -R build/
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: |
+            build/gocz-${{ github.ref_name }}-linux-amd64
+            build/gocz-${{ github.ref_name }}-windows-amd64.exe
+            build/gocz-${{ github.ref_name }}-darwin-amd64
+            build/gocz-${{ github.ref_name }}-darwin-arm64
+          name: Release ${{ github.ref_name }}
+          tag_name: ${{ github.ref_name }}
+          draft: false
+          prerelease: ${{ contains(github.ref_name, 'beta') }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
