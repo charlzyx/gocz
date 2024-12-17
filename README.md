@@ -2,7 +2,9 @@
 
 一个简单的命令行工具，用于生成规范的 git commit message / A simple CLI tool for generating standardized git commit messages.
 
-> 基本都是从 [goji](https://github.com/goji/goji) 抄的, 但是我用不到那么多功能
+> 基本都是从 [muandane/goji](https://github.com/muandane/goji) 抄的, 但是我用不到那么多功能, 根据我的使用习惯改了一下
+
+> Commitizen-like Emoji Commit Tool written in Go (think cz-emoji and other commitizen adapters but in go) 🚀
 
 ![demo](https://r2.chaogpt.space/gocz.gif)
 
@@ -45,23 +47,6 @@ go build
 ```json
 {
   "types": {
-    "build": {
-      "semver": "patch",
-      "title": "📦 构建相关 / Build"
-    },
-    "chore": {
-      "title": "🏡 杂务处理 / Chore"
-    },
-    "ci": {
-      "title": "🤖 持续集成 / CI"
-    },
-    "docs": {
-      "semver": "patch",
-      "title": "📖 文档更新 / Documentation"
-    },
-    "examples": {
-      "title": "🏀 示例更新 / Examples"
-    },
     "feat": {
       "semver": "minor",
       "title": "🚀 增强功能 / Enhancements"
@@ -76,17 +61,23 @@ go build
     },
     "refactor": {
       "semver": "patch",
-      "title": "💅 代码重构 / Refactors"
+      "title": "⚡ 代码重构 / Refactors"
+    },
+    "chore": {
+      "title": "🏡 杂务处理 / Chore"
+    },
+    "ci": {
+      "title": "🤖 持续集成 / CI"
+    },
+    "docs": {
+      "semver": "patch",
+      "title": "📖 文档更新 / Documentation"
     },
     "style": {
-      "title": "🎨 代码风格 / Styles"
+      "title": "💅 代码风格 / Styles"
     },
     "test": {
       "title": "✅ 测试用例 / Tests"
-    },
-    "types": {
-      "semver": "patch",
-      "title": "🌊 类型定义 / Types"
     },
     "wip": {
       "title": "🚧 未完成 / Work in Progress"
