@@ -2,16 +2,16 @@
 
 一个简单的命令行工具，用于生成规范的 git commit message / A simple CLI tool for generating standardized git commit messages.
 
-> 基本都是从 [muandane/goji](https://github.com/muandane/goji) 抄的, 但是我用不到那么多功能, 根据我的使用习惯改了一下
+基本都是从 [muandane/goji](https://github.com/muandane/goji) 抄的, 但是我用不到那么多功能, 根据我的使用习惯改了一下
 
 > Commitizen-like Emoji Commit Tool written in Go (think cz-emoji and other commitizen adapters but in go) 🚀
 
-![demo](https://r2.chaogpt.space/gocz.gif)
+![demogif](https://r2.chaogpt.space/goczdemo.gif)
 
-## install
+## 安装 / install
 
 ```bash
-curl -sSL https://github.com/charlzyx/gocz/blob/master/install.sh | bash
+curl -sSL https://raw.githubusercontent.com/charlzyx/gocz/refs/heads/master/install.sh | bash
 ```
 
 ## 特性 / Features
