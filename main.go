@@ -127,19 +127,7 @@ func checkGitStatus() error {
 		return fmt.Errorf("git 仓库检查失败 \nFailed to check git status: %v", err)
 	}
 
-	// 收集未暂存的文件
-	var unstaged []string
-	for _, line := range strings.Split(strings.TrimSpace(string(output)), "\n") {
-		if line == "" {
-			continue
-		}
-		// 只处理工作区有未暂存的修改
-		if len(line) >= 2 && line[1] != ' ' {
-			unstaged = append(unstaged, line)
-		}
-	}
-
-	if len(unstaged) > 0 {
+	if len(output) > 0 {
 		return fmt.Errorf("以下文件有未暂存的更改，请先使用 git add \nUnstaged changes found in:\n%s",
 		output)
 	}
@@ -163,7 +151,7 @@ func showGitStatusError(title, message string) {
 	huh.NewConfirm().
 		Title(title).
 		Description(message).
-		Affirmative("帮我提交 / Add and Proceed").
+		Affirmative("帮我添加 / Add and Proceed").
 		Negative("退出 / Exit").
 		Value(&confirmed).
 		WithHeight(8).

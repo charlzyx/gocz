@@ -3,7 +3,7 @@ name: Go Multi-Platform Build and Release
 on:
   push:
     tags:
-      - "v.*" # 监听符合 vX.X.X 或 vX.X.X-beta.X 的 tag 推送
+      - "v*" # 监听符合 vX.X.X 或 vX.X.X-beta.X 的 tag 推送
 
 jobs:
   build:
