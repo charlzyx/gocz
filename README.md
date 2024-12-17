@@ -8,6 +8,12 @@
 
 ![demo](https://r2.chaogpt.space/gocz.gif)
 
+## install
+
+```bash
+curl -sSL https://github.com/charlzyx/gocz/blob/master/install.sh | bash
+```
+
 ## 特性 / Features
 
 - 🎯 交互式提交信息生成 / Interactive commit message generation
