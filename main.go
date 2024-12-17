@@ -122,23 +122,6 @@ func askQuestions(config *config.Config, presetType, presetMessage string) (*Com
 func checkGitStatus() error {
 	// 检查 git 状态
 	// git status --porcelain 输出格式为 XY PATH
-	// X 表示暂存区的状态
-	// Y 表示工作区的状态
-	// 状态码含义:
-	// ' ' = 未修改
-	// M = 已修改
-	// A = 新增
-	// D = 删除
-	// R = 重命名
-	// C = 复制
-	// ? = 未跟踪
-	// ! = 忽略
-	// 例如:
-	// M  file1    = 暂存区有修改
-	//  M file2    = 工作区有修改
-	// MM file3    = 暂存区和工作区都有修改
-	// A  file4    = 新增到暂存区
-	// ?? file5    = 未跟踪文件
 	output, err := exec.Command("git", "status", "--porcelain").Output()
 	if err != nil {
 		return fmt.Errorf("git 仓库检查失败 \nFailed to check git status: %v", err)
@@ -150,22 +133,20 @@ func checkGitStatus() error {
 		if line == "" {
 			continue
 		}
-		// 第二列不为空格，表示工作区有未暂存的修改
-		// 这意味着文件有改动但还没有 git add
+		// 只处理工作区有未暂存的修改
 		if len(line) >= 2 && line[1] != ' ' {
-			// 提取文件路径（去掉状态码和空格）
-			path := strings.TrimSpace(line[2:])
-			unstaged = append(unstaged, fmt.Sprintf("  %s (%s)", path, line[:2]))
+			unstaged = append(unstaged, line)
 		}
 	}
 
 	if len(unstaged) > 0 {
 		return fmt.Errorf("以下文件有未暂存的更改，请先使用 git add \nUnstaged changes found in:\n%s",
-			strings.Join(unstaged, "\n"))
+		output)
 	}
 
 	return nil
 }
+
 
 func formatPreview(cmd string) string {
 	// 将命令按 -m 参数分割并格式化
@@ -185,6 +166,7 @@ func showGitStatusError(title, message string) {
 		Affirmative("帮我提交 / Add and Proceed").
 		Negative("退出 / Exit").
 		Value(&confirmed).
+		WithHeight(8).
 		Run()
 
 	if confirmed {
