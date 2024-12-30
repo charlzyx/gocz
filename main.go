@@ -19,6 +19,7 @@ type CommitMessage struct {
 	Description string
 }
 
+// getPackageScopes 获取 packages 目录下的所有子目录名作为 scope 选项
 func getPackageScopes() []string {
 	scopes := []string{}
 	entries, err := os.ReadDir("packages")
@@ -32,13 +33,10 @@ func getPackageScopes() []string {
 	return scopes
 }
 
-func min(a, b int) int {
-	if a < b {
-		return a
-	}
-	return b
-}
-
+// askQuestions 交互式询问用户填写 commit 信息
+// presetType: 预设的 commit 类型
+// presetMessage: 预设的 commit 信息
+// 返回填写好的 CommitMessage 结构体和可能的错误
 func askQuestions(config *config.Config, presetType, presetMessage string) (*CommitMessage, error) {
 	var commitType, commitScope, commitSubject, commitDescription string
 
@@ -77,7 +75,7 @@ func askQuestions(config *config.Config, presetType, presetMessage string) (*Com
 					if len(allScopes) > 0 {
 						return strings.Join(allScopes[:int(math.Min(float64(3), float64(len(allScopes))))], ", ")
 					}
-					return "e.g. api, cli"
+					return "eg. api, cli"
 				}()).
 				CharLimit(50).
 				Suggestions(allScopes).
@@ -85,8 +83,8 @@ func askQuestions(config *config.Config, presetType, presetMessage string) (*Com
 		),
 		huh.NewGroup(
 			huh.NewInput().
-				Title("简述 Summary:").
-				Placeholder("Brief description").
+				Title("概述 Summary:").
+				Placeholder("Short description").
 				CharLimit(70).
 				Value(&commitSubject).
 				Validate(func(s string) error {
@@ -119,23 +117,54 @@ func askQuestions(config *config.Config, presetType, presetMessage string) (*Com
 	}, nil
 }
 
+// checkGitStatus 检查 git 仓库状态
+// 如果有未暂存的更改或未跟踪的文件则返回错误
 func checkGitStatus() error {
-	// 检查 git 状态
-	// git status --porcelain 输出格式为 XY PATH
-	output, err := exec.Command("git", "status", "--porcelain").Output()
+	// 使用 LANG=C 强制 git 输出为英文
+	cmd := exec.Command("git", "status")
+	cmd.Env = append(cmd.Env, "LANG=C") // 设置环境变量 LANG=C
+
+	cmdLocal := exec.Command("git", "status")
+
+	output, err := cmd.Output()
+	outputLocal, _ := cmdLocal.Output()
+
 	if err != nil {
-		return fmt.Errorf("git 仓库检查失败 \nFailed to check git status: %v", err)
+		return fmt.Errorf("无法检查 Git 仓库状态: %v", err)
 	}
 
-	if len(output) > 0 {
-		return fmt.Errorf("以下文件有未暂存的更改，请先使用 git add \nUnstaged changes found in:\n%s",
-		output)
+	outputStr := string(output)
+
+	// 首先检查是否存在未跟踪文件或未暂存的更改
+	if strings.Contains(outputStr, "Untracked files:") || strings.Contains(outputStr, "Changes not staged for commit:") {
+		// 只有在需要显示错误时才处理本地语言输出
+		outputStrLocal := formatLocalGitStatus(outputLocal)
+		return fmt.Errorf(outputStrLocal)
 	}
 
 	return nil
 }
 
+// formatLocalGitStatus 格式化本地语言的 git status 输出
+func formatLocalGitStatus(outputLocal []byte) string {
+	lines := strings.Split(string(outputLocal), "\n")
+	filteredLines := make([]string, 0)
+	for _, line := range lines {
+		trimmedLine := strings.TrimSpace(line)
+		// Skip empty lines and lines starting with "(" or "（"
+		if trimmedLine != "" && !strings.HasPrefix(trimmedLine, "(") && !strings.HasPrefix(trimmedLine, "（") {
+			filteredLines = append(filteredLines, line)
+		}
+	}
 
+	if len(filteredLines) > 2 {
+		filteredLines = filteredLines[2:]
+	}
+	return strings.Join(filteredLines, "\n")
+}
+
+// formatPreview 格式化 git commit 命令预览
+// 将多行 commit 信息格式化为易读的形式
 func formatPreview(cmd string) string {
 	// 将命令按 -m 参数分割并格式化
 	parts := strings.Split(cmd, " -m ")
@@ -146,33 +175,42 @@ func formatPreview(cmd string) string {
 	return formatted
 }
 
+// showGitStatusError 显示 Git 状态错误对话框
+// 提供添加未暂存文件或退出程序的选项
 func showGitStatusError(title, message string) {
 	var confirmed bool
-	huh.NewConfirm().
+
+	err := huh.NewConfirm().
 		Title(title).
 		Description(message).
-		Affirmative("帮我添加 / Add and Proceed").
-		Negative("退出 / Exit").
+		Affirmative("帮我 add 啊").
+		Negative("退下!").
 		Value(&confirmed).
-		WithHeight(8).
+		// WithHeight(20).
 		Run()
+
+	if err != nil && err.Error() == "user aborted" {
+		os.Exit(0)
+	}
 
 	if confirmed {
 		// 执行 git add .
 		if err := exec.Command("git", "add", ".").Run(); err != nil {
-			showError("❌ 执行错误 / Execution Error", fmt.Sprintf("执行 git add 失败 / Failed to execute git add: %v", err))
+			showError("❌ 执行错误", fmt.Sprintf("执行 git add 失败: %v", err))
 		}
 	} else {
 		os.Exit(1)
 	}
 }
+
+// showError 显示错误信息对话框并退出程序
 func showError(title, message string) {
 	var confirmed bool
 	huh.NewConfirm().
 		Title(title).
 		Description(message).
-		Affirmative("了解 / OK").
-		Negative("退出 / Exit").
+		Affirmative("朕知道了").
+		Negative("退下吧").
 		Value(&confirmed).
 		Run()
 	os.Exit(1)
@@ -181,12 +219,12 @@ func showError(title, message string) {
 func main() {
 	// 检查 git 状态
 	if err := checkGitStatus(); err != nil {
-		showGitStatusError("❌ 错误 / Error", err.Error())
+		showGitStatusError("❌ 怎么回事啊?!", err.Error())
 	}
 
 	cfg, err := config.LoadConfig()
 	if err != nil {
-		showError("❌ 配置错误 / Config Error", fmt.Sprintf("加载配置失败 / Failed to load config: %v", err))
+		showError("❌ 配置错误", fmt.Sprintf("加载配置失败: %v", err))
 	}
 
 	// 获取命令行参数
@@ -201,7 +239,7 @@ func main() {
 
 	message, err := askQuestions(cfg, presetType, presetMessage)
 	if err != nil {
-		showError("❌ 输入错误 / Input Error", err.Error())
+		showError("❌ 输入错误", err.Error())
 	}
 
 	// 生成主消息
@@ -234,18 +272,22 @@ func main() {
 
 	// 显示预览并确认
 	var confirmed bool = true
-	huh.NewConfirm().
-		Title("即将执行 / Will execute:").
+	err = huh.NewConfirm().
+		Title("即将执行:").
 		Description(formatPreview(cmd)).
-		Affirmative("执行 / Execute").
-		Negative("取消 / Cancel").
+		Affirmative("执行").
+		Negative("取消").
 		Value(&confirmed).
 		Run()
+
+	if err != nil && err.Error() == "user aborted" {
+		os.Exit(0)
+	}
 
 	if confirmed {
 		// 执行 git commit 命令
 		if err := exec.Command("sh", "-c", cmd).Run(); err != nil {
-			showError("❌ 执行错误 / Execution Error", fmt.Sprintf("执行 git commit 失败 / Failed to execute git commit: %v", err))
+			showError("❌ 执行失败", fmt.Sprintf("执行 git commit 失败: %v", err))
 		}
 	} else {
 		os.Exit(0)
